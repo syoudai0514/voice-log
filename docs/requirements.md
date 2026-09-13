@@ -1,6 +1,6 @@
 # Voice Log — Canonical Product Requirements
 
-Status: DRAFT v0.1  
+Status: DRAFT v0.2  
 Product name: Voice Log  
 Repository: `syoudai0514/voice-log`
 
@@ -93,6 +93,16 @@ The app must not claim a cloud upload succeeded when the provider has not confir
 
 ### STO-011 Cloud metadata
 Provider-independent metadata may be stored locally and/or in a cloud metadata store, but audio preservation must not depend on a single database row surviving.
+
+### STO-012 Local retention policy
+After a recording has been confirmed as preserved in the configured cloud destination, its local audio copy shall be retained for at least 7 days after recording completion. On or after day 7, the next eligible cleanup run may remove/evict the local audio copy.
+
+Cleanup must not remove a local audio artifact unless the corresponding cloud preservation state is verified. If cloud verification is unavailable or failed, the local copy must remain.
+
+The retention policy applies to audio files/chunks; lightweight metadata, manifests, transcript artifacts, and recovery records may be retained longer as needed for indexing and recovery.
+
+### STO-013 Cleanup timing
+Voice Log does not need to wake at an exact 7-day boundary. Cleanup shall run opportunistically when the app or an allowed background maintenance task executes, and shall remove only items that satisfy STO-012 at that time.
 
 ## 5. Recording presentation modes
 
@@ -188,6 +198,25 @@ If a cloud AI provider is used, the app shall clearly distinguish on-device proc
 ### AI-004 Retryability
 Failed title/cleanup/summary generation must be retryable without affecting the original recording or raw transcript.
 
+### AI-005 On-device default
+For title generation, transcript cleanup, and summarization, Voice Log shall prefer Apple's on-device Foundation Models framework when the device/OS/language configuration supports it.
+
+The V1 target is iOS 26+ on Apple Intelligence-capable iPhones. Japanese must be supported by the selected on-device path.
+
+### AI-006 Runtime capability check
+The app shall not assume the on-device model is always available. At runtime it must detect model availability / supported locale and expose a clear unavailable state rather than failing silently.
+
+### AI-007 Google fallback
+When the on-device model is unavailable or unsuitable, Voice Log may offer Google Gemini API as an optional fallback provider.
+
+The fallback must not automatically transmit transcript/audio to Google without an explicit user action/consent for that operation or a previously configured explicit opt-in.
+
+### AI-008 Cloud AI privacy disclosure
+Before first use of a cloud AI provider, Voice Log shall clearly state that transcript/content will leave the device and identify the configured provider. The app shall preserve the raw transcript locally regardless of provider success/failure.
+
+### AI-009 Free-tier preference
+For the Google fallback, implementation should prefer a Gemini API model with a current no-cost/free tier when one is available and suitable. Exact model names/limits must be re-verified against current Google documentation at implementation time rather than hard-coded into canonical requirements.
+
 ## 10. Reliability and observability
 
 ### REL-001 Explicit state machine
@@ -236,30 +265,38 @@ Requirements must not claim guaranteed cloud preservation when the device has no
 - AC-011: Original M4A remains accessible after transcription and summarization.
 - AC-012: A failed transcription/summary does not alter or delete the recording.
 
-## 13. Open decisions
+## 13. Resolved product decisions
 
-These decisions remain intentionally open and must not be silently guessed during implementation.
+### RD-001 Minimum iOS version
+V1 shall target iOS 26+.
 
-### OD-001 Minimum iOS version
-Proposed: iOS 26+ only for V1, to use SpeechAnalyzer as the primary transcription API.
+### RD-002 V1 cloud targets
+V1 shall implement iCloud Drive with a configurable destination folder.
 
-### OD-002 V1 cloud targets
-Proposed:
-- V1: iCloud Drive with configurable folder.
-- Architecture from day one: pluggable cloud target.
-- Later: Files-provider folders and/or direct object storage such as S3-compatible/Supabase Storage.
+The storage architecture shall be pluggable from day one so additional Files providers / object-storage providers can be added later without rewriting the recording engine.
 
-### OD-003 Transcription timing
-Proposed: post-recording transcription by default. Live transcription can be added later so it cannot degrade recording reliability.
+### RD-003 Transcription timing
+V1 transcription shall run post-recording by default. Live transcription is deferred so active recording reliability remains the higher priority.
 
-### OD-004 Local retention after verified cloud preservation
-Need to decide default policy:
-- keep all local audio,
-- evict automatically after verified cloud preservation,
-- or retain for N days / only evict when storage is low.
+### RD-004 Local retention after verified cloud preservation
+After verified cloud preservation, local audio shall be retained for at least 7 days. On/after day 7, the next eligible cleanup execution may remove/evict the local audio copy, subject to STO-012.
 
-### OD-005 Summarization provider
-Need to decide default:
-- on-device Apple Intelligence/Foundation Models when available,
-- external LLM,
-- or provider-selectable with on-device preferred.
+### RD-005 Summarization provider
+Primary provider: Apple on-device Foundation Models where runtime capability and Japanese support are available.
+
+Fallback provider: Google Gemini API, preferably using a current free-tier model, only through an explicit cloud-AI opt-in flow.
+
+### RD-006 Transcription provider
+Primary transcription remains Apple SpeechAnalyzer / SpeechTranscriber on iOS 26+. Alternate transcription providers may be added behind the provider abstraction later.
+
+## 14. Remaining design decisions
+
+These are implementation/design choices, not unresolved product requirements, and may be decided in architecture/ADR work provided they do not change the requirements above:
+
+- exact chunk duration,
+- exact local metadata database technology,
+- exact manifest serialization format,
+- exact iCloud directory naming convention,
+- exact background-task scheduling strategy,
+- exact Google Gemini model chosen at implementation time,
+- exact UI visual design within Standard/Minimal mode constraints.
