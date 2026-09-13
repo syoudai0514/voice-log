@@ -21,7 +21,7 @@ None. No production app implementation has started.
 - START-HERE / authority hierarchy: created
 - Canonical requirements: initial product decisions resolved
 - Current architecture: created
-- ADRs: pending
+- ADRs: ADR-001 and ADR-002 accepted
 - Tests / CI: not yet created
 
 ## Resolved product decisions
@@ -43,8 +43,11 @@ None. No production app implementation has started.
 - Minimal UI must not bypass or hide iOS privacy indicators.
 - Cloud AI must not receive transcript/audio silently.
 
+## Accepted ADRs
+- `docs/adr/ADR-001-durable-recording-recovery.md`
+- `docs/adr/ADR-002-on-device-ai-fallback.md`
+
 ## Next canonical work
-1. Write ADR for durable recording / manifest / recovery architecture.
-2. Write ADR for on-device AI primary + explicit Gemini fallback.
-3. Define implementation work packages and acceptance-test matrix.
-4. Only then start production implementation.
+1. Define implementation work packages and acceptance-test matrix.
+2. Freeze the first implementation slice.
+3. Start production implementation only against the frozen requirements/architecture/ADRs.
